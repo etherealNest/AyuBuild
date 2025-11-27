@@ -1,7 +1,7 @@
 name: Prepare Libraries
 
 on:
-  workflow_dispatch: # Ручной запуск, так как это тяжелая операция сборки зависимостей
+  workflow_dispatch:
 
 jobs:
   prepare:
@@ -11,13 +11,12 @@ jobs:
       Platform: x64
     
     steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+      - name: Setup MSVC (Visual Studio 2022)
+        uses: ilammy/msvc-dev-cmd@v1
         with:
-          path: tdesktop
-          submodules: recursive
+          arch: amd64
 
-      - name: Setup Python
+      - name: Setup Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -28,11 +27,6 @@ jobs:
           repository: AyuGram/AyuGramDesktop
           path: tdesktop
           submodules: recursive
-
-      - name: Setup MSVC (Visual Studio 2022)
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
 
       - name: Create Build Directories
         run: |
@@ -47,26 +41,86 @@ jobs:
           path: |
             Libraries
             ThirdParty
-          # Ключ кэша зависит от содержимого скрипта подготовки, где указаны версии библиотек
           key: prepare-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/win.bat') }}
 
+      - name: Verify and Fix Python Environment
+        run: |
+          set "VENV_PYTHON=ThirdParty\python\Scripts\python.exe"
+          set "NEED_FIX=0"
+
+          echo [INFO] Checking cached Python...
+          
+          if exist "%VENV_PYTHON%" (
+              "%VENV_PYTHON%" --version >nul 2>&1
+              if errorlevel 1 (
+                  echo [WARN] Cached Python is broken or paths mismatch.
+                  set "NEED_FIX=1"
+              ) else (
+                  echo [INFO] Cached Python works correctly. Skipping reinstall.
+              )
+          ) else (
+              echo [WARN] Python venv not found in cache.
+              set "NEED_FIX=1"
+          )
+
+          if "%NEED_FIX%"=="1" (
+              echo [INFO] Starting Python environment reconstruction...
+              if exist ThirdParty\python rmdir /s /q ThirdParty\python
+              
+              cd ThirdParty
+              python -m venv python
+              call python\Scripts\activate.bat
+              
+              echo [INFO] Installing dependencies...
+              pip install pywin32 six meson
+              echo [INFO] Reconstruction complete.
+          )
+        shell: cmd
+
       - name: Run Prepare Script
-        # Запуск производится из корневой директории (родительской для tdesktop), как требует логика скрипта
         run: |
           tdesktop\Telegram\build\prepare\win.bat
         shell: cmd
 
-      - name: Upload Libraries Artifact
+#      - name: Upload Libraries Artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: prepared-Libraries
+#          path: Libraries/
+#          retention-days: 1
+#
+#      - name: Upload ThirdParty Artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: prepared-ThirdParty
+#          path: ThirdParty/
+#          retention-days: 1
+
+      # Настройка CMake и Ninja (если вы не добавили этот шаг в самом начале файла,
+      # то раскомментируйте эти две строки, иначе configure.bat упадет)
+      - name: Setup CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      # Генерация проекта Visual Studio (.sln)
+      - name: Configure CMake
+        run: |
+          cd tdesktop\Telegram
+          configure.bat x64 -D TDESKTOP_API_ID=2040 -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
+        shell: cmd
+
+      # Компиляция проекта через MSBuild
+      # /maxcpucount - использует все ядра CPU для ускорения
+      - name: Build AyuGram (Release)
+        run: |
+          msbuild tdesktop\out\Telegram.sln /property:Configuration=Release /property:Platform=x64 /maxcpucount
+        shell: cmd
+
+      # Загрузка итогового EXE и модулей
+      - name: Upload Final Build
         uses: actions/upload-artifact@v4
         with:
-          name: prepared-Libraries
-          path: Libraries/
-          retention-days: 1
-
-
-      - name: Upload Libraries Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: prepared-ThirdParty
-          path: ThirdParty/
-          retention-days: 1
+          name: AyuGram-Release
+          path: |
+            tdesktop/out/Release/AyuGram.exe
+            tdesktop/out/Release/modules
+          retention-days: 7
