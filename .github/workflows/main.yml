@@ -22,6 +22,13 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Clone AyuGram Source Code
+        uses: actions/checkout@v4
+        with:
+          repository: AyuGram/AyuGramDesktop
+          path: tdesktop
+          submodules: recursive
+
       - name: Setup MSVC (Visual Studio 2022)
         uses: ilammy/msvc-dev-cmd@v1
         with:
