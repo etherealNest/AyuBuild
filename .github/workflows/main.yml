@@ -43,6 +43,11 @@ jobs:
             ThirdParty
           key: prepare-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py') }}
 
+      - name: Run Prepare Script
+        run: |
+          tdesktop\Telegram\build\prepare\win.bat
+        shell: cmd
+
       - name: Verify and Fix Python Environment
         run: |
           set "VENV_PYTHON=ThirdParty\python\Scripts\python.exe"
@@ -75,11 +80,6 @@ jobs:
               pip install pywin32 six meson
               echo [INFO] Reconstruction complete.
           )
-        shell: cmd
-
-      - name: Run Prepare Script
-        run: |
-          tdesktop\Telegram\build\prepare\win.bat
         shell: cmd
 
 #      - name: Upload Libraries Artifact
