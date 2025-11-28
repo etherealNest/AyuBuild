@@ -41,7 +41,7 @@ jobs:
           path: |
             Libraries
             ThirdParty
-          key: prepare-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/win.bat') }}
+          key: prepare-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py') }}
 
       - name: Verify and Fix Python Environment
         run: |
