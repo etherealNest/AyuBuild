@@ -101,6 +101,12 @@ jobs:
       - name: Setup CMake and Ninja
         uses: lukka/get-cmake@latest
 
+      - name: Download and Apply CMake Patch
+        run: |
+          curl -sL https://gist.githubusercontent.com/etherealNest/111a847e40bf2c7819d0177f8a9439e8/raw/d7a0e9c07f66f6f19e96e75f4be1fdff159512ca/ayugram.patch -o patch.diff
+          git apply --ignore-whitespace --directory=tdesktop/cmake patch.diff
+        shell: cmd
+
       # Генерация проекта Visual Studio (.sln)
       - name: Configure CMake
         run: |
