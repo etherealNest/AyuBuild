@@ -118,7 +118,7 @@ jobs:
       # /maxcpucount - использует все ядра CPU для ускорения
       - name: Build AyuGram (Release)
         run: |
-          msbuild tdesktop\out\Telegram.sln /property:Configuration=Release /property:Platform=x64 /maxcpucount
+          msbuild tdesktop\out\Telegram.sln /property:Configuration=Release /property:Platform=x64 /maxcpucount:2
         shell: cmd
 
       # Загрузка итогового EXE и модулей
